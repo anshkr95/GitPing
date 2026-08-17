@@ -1,0 +1,23 @@
+name: monitor
+
+# Triggers a monitor scan on the deployed app every 15 minutes so email
+# alerts keep going out even while the dashboard is closed.
+#
+# Required repository secret: GITPING_BASE_URL - the full URL of the
+# deployment, e.g. https://gitping.vercel.app
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Trigger monitor scan
+        env:
+          GITPING_BASE_URL: ${{ secrets.GITPING_BASE_URL }}
+        run: |
+          curl --fail --silent --show-error --max-time 50 \
+            -X GET "${GITPING_BASE_URL%/}/api/monitor/scan"
