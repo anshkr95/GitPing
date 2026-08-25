@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GitPing</title>
+  <meta name="description" content="Track GitHub repositories and get notified when new issues match your selected labels.">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <script>
+    try{const t=localStorage.getItem('gitping_theme');if(t)document.documentElement.setAttribute('data-theme',t)}catch(e){}
+  </script>
+</head>
+<body>
+
+<header>
+  <div class="app-container header-inner">
+    <div class="header-left">
+      <svg class="header-logo" width="28" height="28" viewBox="0 0 16 16" fill="currentColor">
+        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+      </svg>
+      <span class="header-title">GitPing</span>
+      <span class="header-badge" id="header-repo-count">0 repos tracked</span>
+    </div>
+    <div class="header-right">
+      <span class="countdown-pill">Next scan · <span id="countdown">60</span>s</span>
+      <button class="btn" id="btn-scan" onclick="handleManualScan()">
+        <svg id="scan-spinner" class="hidden spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+        <svg class="scan-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        Scan Now
+      </button>
+      <button class="btn btn-icon notif-btn" onclick="openNotifDrawer()" title="Notifications">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span class="notif-badge hidden" id="notif-badge">0</span>
+      </button>
+      <button class="btn btn-icon" onclick="toggleTheme()" title="Toggle theme">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+      <button class="btn btn-icon" onclick="openSettingsModal()" title="Settings">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="app-container">
+  <div class="tabs">
+    <button class="tab" id="tab-issues" onclick="setTab('issues')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 11-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 002.5 2.5z"/></svg>
+      Issues <span class="tab-badge" id="tab-badge-issues">0</span>
+    </button>
+    <button class="tab active" id="tab-tracked" onclick="setTab('tracked')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+      Tracked <span class="tab-badge" id="tab-badge-tracked">0</span>
+    </button>
+    <button class="tab" id="tab-resources" onclick="setTab('resources')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      Resources
+    </button>
+  </div>
+
+  <div id="content-issues" class="tab-content hidden">
+    <div class="hero-banner">
+      <h1>Never miss a critical GitHub issue again</h1>
+      <p>Your centralized feed for tracked issues across all your repositories. Set up labels, sit back, and let GitPing find the issues that matter to you.</p>
+    </div>
+    <div id="issues-list" class="card-grid"></div>
+    <div id="issues-empty" class="empty-state hidden">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M8 15h8M9 9h.01M15 9h.01"/></svg>
+      <h3>No issues yet</h3>
+      <p>When tracked repositories get new issues matching your labels, they'll appear here.</p>
+    </div>
+  </div>
+
+  <div id="content-tracked" class="tab-content">
+    <div class="search-section">
+      <div class="search-wrapper">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" class="input search-input" id="search-input" placeholder="Search GitHub repositories... (e.g. 'react', 'tensorflow', 'facebook/react')">
+      </div>
+      <div class="filter-row" id="filter-row">
+        <select class="input filter-select" id="filter-language" onchange="triggerFilteredSearch()">
+          <option value="">Any Language</option>
+          <option value="python">Python</option>
+          <option value="javascript">JavaScript</option>
+          <option value="typescript">TypeScript</option>
+          <option value="java">Java</option>
+          <option value="go">Go</option>
+          <option value="rust">Rust</option>
+          <option value="c++">C++</option>
+          <option value="c#">C#</option>
+          <option value="ruby">Ruby</option>
+          <option value="php">PHP</option>
+          <option value="swift">Swift</option>
+          <option value="kotlin">Kotlin</option>
+          <option value="dart">Dart</option>
+          <option value="shell">Shell</option>
+        </select>
+        <select class="input filter-select" id="filter-sort" onchange="triggerFilteredSearch()">
+          <option value="">Best Match</option>
+          <option value="stars-desc">Most Stars</option>
+          <option value="stars-asc">Fewest Stars</option>
+          <option value="updated-desc">Recently Updated</option>
+          <option value="forks-desc">Most Forks</option>
+        </select>
+        <input type="text" class="input filter-topic" id="filter-topic" placeholder="Filter by topic (e.g. machine-learning)" onchange="triggerFilteredSearch()">
+      </div>
+      <div id="search-results" class="card-grid"></div>
+      <div id="search-load-more" class="load-more-wrap hidden">
+        <button class="btn" onclick="loadMoreResults()">Load More Results</button>
+      </div>
+      <div id="search-loading" class="empty-state hidden"><div class="loading-dots"><span></span><span></span><span></span></div></div>
+    </div>
+
+    <div id="tracked-section">
+      <h2 id="tracked-heading" class="section-heading hidden">Your Tracked Repositories</h2>
+      <div id="tracked-list" class="card-grid"></div>
+      <div id="tracked-empty" class="empty-state">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+        <h3>No tracked repositories</h3>
+        <p>Search for a repository above and click <strong>Track</strong> to start monitoring issues.</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="content-resources" class="tab-content hidden">
+    <p style="color:var(--fg-muted);margin-bottom:1.25rem;font-size:.875rem">Helpful links for finding open-source issues to contribute to.</p>
+    <div class="card-grid">
+
+      <a class="card resource-card" href="https://github.com/features/issues" target="_blank" rel="noopener">
+        <div class="resource-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+        <div><h3>GitHub Issues Guide</h3><p>Official guide on using issues for project planning and tracking.</p></div>
+        <svg class="resource-ext" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      </a>
+
+      <a class="card resource-card" href="https://goodfirstissue.dev/" target="_blank" rel="noopener">
+        <div class="resource-icon" style="color:var(--success-fg)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+        <div><h3>Good First Issues</h3><p>Beginner-friendly issues across popular open-source projects.</p></div>
+        <svg class="resource-ext" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      </a>
+
+      <a class="card resource-card" href="https://www.firsttimersonly.com/" target="_blank" rel="noopener">
+        <div class="resource-icon" style="color:var(--accent-fg)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+        <div><h3>First Timers Only</h3><p>Welcoming projects and resources for brand new contributors.</p></div>
+        <svg class="resource-ext" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      </a>
+
+      <a class="card resource-card" href="https://www.codetriage.com/" target="_blank" rel="noopener">
+        <div class="resource-icon" style="color:var(--warning-fg)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+        <div><h3>CodeTriage</h3><p>Get one open-source issue delivered to your inbox each day to help triage.</p></div>
+        <svg class="resource-ext" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      </a>
+
+      <a class="card resource-card" href="https://up-for-grabs.net/" target="_blank" rel="noopener">
+        <div class="resource-icon" style="color:var(--tab-accent)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg></div>
+        <div><h3>Up For Grabs</h3><p>Curated tasks specifically tagged for new contributors across many projects.</p></div>
+        <svg class="resource-ext" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      </a>
+
+      <a class="card resource-card" href="https://github.com/MunGell/awesome-for-beginners" target="_blank" rel="noopener">
+        <div class="resource-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+        <div><h3>Awesome for Beginners</h3><p>Community-maintained list of projects with beginner-friendly issues.</p></div>
+        <svg class="resource-ext" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      </a>
+
+    </div>
+  </div>
+</main>
+
+<div class="modal-overlay" id="setup-modal">
+  <div class="modal-content" style="max-width:460px">
+    <div class="modal-header"><h2>Welcome to GitPing</h2></div>
+    <div class="modal-body">
+      <p style="color:var(--fg-muted);margin-bottom:1.25rem">Track GitHub repos and get notified when matching issues are created. Set up optional credentials below, or skip and configure later.</p>
+      <div class="form-group">
+        <label>GitHub Token <span class="label-hint">(optional, raises rate limit)</span></label>
+        <input type="password" class="input" id="setup-token" placeholder="ghp_xxxxxxxxxxxx">
+      </div>
+      <div class="form-group">
+        <label>Email Address <span class="label-hint">(optional, for alerts)</span></label>
+        <input type="email" class="input" id="setup-email" placeholder="you@example.com">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="skipSetup()">Skip</button>
+      <button class="btn btn-primary" onclick="finishSetup()">Get Started</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="settings-modal">
+  <div class="modal-content" style="max-width:480px">
+    <div class="modal-header">
+      <h2>Settings</h2>
+      <button class="btn btn-icon" onclick="closeSettingsModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" class="input" id="settings-email" placeholder="you@example.com">
+      </div>
+      <div class="form-group toggle-row">
+        <span>Email Alerts</span>
+        <label class="switch"><input type="checkbox" id="settings-email-enabled" checked><span class="slider"></span></label>
+      </div>
+      <div class="form-group toggle-row">
+        <span>Sound Alerts</span>
+        <label class="switch"><input type="checkbox" id="settings-sound-enabled" checked><span class="slider"></span></label>
+      </div>
+      <div class="form-group toggle-row">
+        <span>Browser Notifications</span>
+        <label class="switch"><input type="checkbox" id="settings-browser-enabled"><span class="slider"></span></label>
+      </div>
+      <div class="form-group">
+        <label>Polling Interval (seconds)</label>
+        <input type="number" class="input" id="settings-polling" min="30" value="60">
+      </div>
+      <div class="form-group">
+        <label>GitHub Token <span class="label-hint">(optional)</span></label>
+        <input type="password" class="input" id="settings-token" placeholder="ghp_xxxxxxxxxxxx">
+        <small id="settings-token-hint" class="label-hint"></small>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="sendTestEmail()">Send Test Email</button>
+      <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="label-modal">
+  <div class="modal-content" style="max-width:540px">
+    <div class="modal-header">
+      <h2 id="label-modal-title">Track Labels</h2>
+      <button class="btn btn-icon" onclick="closeLabelModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group toggle-row">
+        <span>Track All Issues <span class="label-hint">(every new issue, regardless of labels)</span></span>
+        <label class="switch"><input type="checkbox" id="label-track-all" onchange="toggleTrackAll()"><span class="slider"></span></label>
+      </div>
+      <div id="label-filters">
+        <div class="form-group">
+          <label>Match Mode</label>
+          <select id="label-match-mode" class="input">
+            <option value="any">ANY - match if issue has at least one selected label</option>
+            <option value="all">ALL - match only if issue has every selected label</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Select Labels <span class="label-hint" id="label-count-hint">(0 selected)</span></label>
+          <div id="label-grid" class="label-grid"></div>
+          <div id="label-loading" class="empty-state hidden" style="padding:1rem"><div class="loading-dots"><span></span><span></span><span></span></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeLabelModal()">Cancel</button>
+      <button class="btn btn-primary" id="btn-save-labels" onclick="saveLabels()">Save & Track</button>
+    </div>
+  </div>
+</div>
+
+<div class="drawer-overlay" id="notif-drawer" onclick="closeNotifDrawer()">
+  <div class="drawer-content" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Notifications</h2>
+      <div style="display:flex;gap:.5rem;align-items:center">
+        <button class="btn" onclick="markAllRead()">Mark All Read</button>
+        <button class="btn" onclick="clearAllNotifications()">Clear</button>
+        <button class="btn btn-icon" onclick="closeNotifDrawer()">✕</button>
+      </div>
+    </div>
+    <div class="modal-body" id="notif-list" style="flex:1;overflow-y:auto"></div>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>
