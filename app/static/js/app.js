@@ -547,6 +547,10 @@ async function saveLabels() {
     }
     closeLabelModal();
     await fetchAllData();
+    if (!state.editingSub) {
+      const trackedSection = $('tracked-section');
+      if (trackedSection) trackedSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   } catch (err) {
     toast('Could not save', err.message, 'error');
   }
