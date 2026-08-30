@@ -10,6 +10,11 @@ async def get_subscriptions():
 
 @router.post('', status_code=201)
 async def add_subscription(data: Dict[str, Any] = Body(...)):
+    if not db.storage_available():
+        raise HTTPException(
+            status_code=503,
+            detail="Persistent storage is not configured. Attach Vercel KV and set KV_REST_API_URL and KV_REST_API_TOKEN.",
+        )
     repo_full_name = data.get("repoFullName")
     tracked_labels = data.get("trackedLabels")
     

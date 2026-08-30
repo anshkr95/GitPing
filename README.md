@@ -47,12 +47,13 @@ Copy `.env.example` to `.env.local` and set any values you need:
 | `SMTP_PORT` | SMTP port (default: `587`) |
 | `SMTP_USER` | SMTP username |
 | `SMTP_PASS` | SMTP password |
+| `KV_REST_API_URL` / `KV_REST_API_TOKEN` | Required on Vercel for durable tracking state |
 
 ## Deployment
 
 **Render:** Set build command to `pip install -r requirements.txt` and start command to `uvicorn app.main:app --host 0.0.0.0 --port $PORT`.
 
-**Vercel:** Import the repo and deploy. The included `vercel.json` handles routing.
+**Vercel:** Import the repo, attach a Vercel KV database, and redeploy. The KV integration supplies `KV_REST_API_URL` and `KV_REST_API_TOKEN`; without them, Vercel cannot persist tracked repositories between function invocations.
 
 ## License
 

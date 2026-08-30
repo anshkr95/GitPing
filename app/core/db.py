@@ -13,6 +13,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
+import httpx
+
 from app.models import (
     Subscription,
     DetectedIssue,
@@ -39,6 +41,18 @@ def _get_db_dir() -> Path:
 
 DB_DIR = _get_db_dir()
 DB_FILE = DB_DIR / "radar-db.json"
+KV_KEY = "gitping:state"
+
+
+def _kv_config() -> tuple[str, str] | None:
+    url = os.environ.get("KV_REST_API_URL") or os.environ.get("UPSTASH_REDIS_REST_URL")
+    token = os.environ.get("KV_REST_API_TOKEN") or os.environ.get("UPSTASH_REDIS_REST_TOKEN")
+    return (url.rstrip("/"), token) if url and token else None
+
+
+def storage_available() -> bool:
+    """Return whether the configured runtime has durable storage."""
+    return _kv_config() is not None or not os.environ.get("VERCEL")
 
 
 def _default_settings() -> dict:
@@ -63,6 +77,30 @@ def _ensure_dir() -> None:
 
 def _read() -> dict:
     """Read the full database from disk, returning defaults on any error."""
+    kv = _kv_config()
+    if kv:
+        url, token = kv
+        try:
+            response = httpx.post(
+                url,
+                headers={"Authorization": f"Bearer {token}"},
+                json=["GET", KV_KEY],
+                timeout=5.0,
+            )
+            response.raise_for_status()
+            raw = response.json().get("result")
+            if raw:
+                data = json.loads(raw)
+                return {
+                    "subscriptions": data.get("subscriptions") or [],
+                    "detectedIssues": data.get("detectedIssues") or [],
+                    "notifications": data.get("notifications") or [],
+                    "settings": {**_default_settings(), **(data.get("settings") or {})},
+                    "seenIssueIds": data.get("seenIssueIds") or [],
+                }
+        except Exception:
+            pass
+
     _ensure_dir()
     try:
         if DB_FILE.exists():
@@ -86,6 +124,21 @@ def _read() -> dict:
 
 
 def _write(data: dict) -> None:
+    kv = _kv_config()
+    if kv:
+        url, token = kv
+        try:
+            response = httpx.post(
+                url,
+                headers={"Authorization": f"Bearer {token}"},
+                json=["SET", KV_KEY, json.dumps(data)],
+                timeout=5.0,
+            )
+            response.raise_for_status()
+        except Exception:
+            pass
+        return
+
     _ensure_dir()
     try:
         DB_FILE.write_text(json.dumps(data, indent=2), encoding="utf-8")
