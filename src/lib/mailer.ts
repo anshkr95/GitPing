@@ -119,13 +119,11 @@ export async function sendIssueAlertEmail(
   const recipient = settings.email || process.env.GITPING_ALERT_EMAIL || '';
 
   if (!recipient || !settings.emailEnabled) {
-    console.log(`[Mailer] Email disabled or no recipient configured, skipping for ${issue.repoFullName}#${issue.issueNumber}`);
     return;
   }
 
   const transporter = createTransporter();
   if (!transporter) {
-    console.log(`[Mailer] SMTP not configured (set SMTP_USER and SMTP_PASS env vars). Skipping email to ${recipient}`);
     return;
   }
 
@@ -139,10 +137,7 @@ export async function sendIssueAlertEmail(
       subject,
       html,
     });
-    console.log(`[Mailer] Email sent to ${recipient} for ${issue.repoFullName}#${issue.issueNumber}`);
-  } catch (err) {
-    console.error(`[Mailer] Failed to send email to ${recipient}:`, err);
-  }
+  } catch {}
 }
 
 // HTML template for welcome email
@@ -211,7 +206,6 @@ export async function sendWelcomeEmail(recipient: string): Promise<{ success: bo
   const transporter = createTransporter();
   if (!transporter) {
     const msg = 'SMTP not configured. Please set SMTP_USER and SMTP_PASS environment variables.';
-    console.log(`[Mailer] ${msg}`);
     return { success: false, error: msg };
   }
 
@@ -222,11 +216,9 @@ export async function sendWelcomeEmail(recipient: string): Promise<{ success: bo
       subject: 'Welcome to GitPing - email alerts are on',
       html: buildWelcomeHtml(recipient),
     });
-    console.log(`[Mailer] Welcome email sent to ${recipient}`);
     return { success: true };
   } catch (err: any) {
     const errorMsg = err?.message || String(err);
-    console.error(`[Mailer] Failed to send welcome email to ${recipient}:`, errorMsg);
     return { success: false, error: errorMsg };
   }
 }

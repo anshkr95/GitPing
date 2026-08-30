@@ -32,7 +32,5 @@ export function playAlertChime() {
       osc.start(ctx.currentTime + start);
       osc.stop(ctx.currentTime + start + duration);
     });
-  } catch (err) {
-    console.warn('Audio playback error (user may need to interact with page first):', err);
-  }
+  } catch {}
 }

@@ -89,8 +89,8 @@ def _write(data: dict) -> None:
     _ensure_dir()
     try:
         DB_FILE.write_text(json.dumps(data, indent=2), encoding="utf-8")
-    except Exception as exc:
-        print(f"[DB] Failed to write: {exc}")
+    except Exception:
+        pass
 
 
 

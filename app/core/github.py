@@ -4,7 +4,6 @@ Async GitHub API client using httpx
 
 from __future__ import annotations
 
-import logging
 from typing import Any
 from urllib.parse import quote
 
@@ -14,7 +13,6 @@ from app.core.constants import CURATED_REPOSITORIES
 from app.core import db as database
 from app.config import get_settings
 
-logger = logging.getLogger(__name__)
 
 GITHUB_API_BASE = "https://api.github.com"
 
@@ -110,12 +108,10 @@ async def search_repositories(query: str, token: str = "") -> list[dict[str, Any
         async with httpx.AsyncClient(timeout=10.0) as client:
             res = await client.get(url, headers=_get_auth_headers(token))
             if res.status_code != 200:
-                logger.warning("GitHub search API %d: %s", res.status_code, res.text[:200])
                 return _curated_fallback(clean)
             data = res.json()
             return [_map_repo(item) for item in (data.get("items") or [])]
-    except Exception as exc:
-        logger.error("GitHub search failed: %s", exc)
+    except Exception:
         return _curated_fallback(clean)
 
 
@@ -144,8 +140,7 @@ async def get_repo_details(owner: str, repo: str, token: str = "") -> dict[str, 
                         }
                 return None
             return _map_repo(res.json())
-    except Exception as exc:
-        logger.error("Failed to get repo %s/%s: %s", owner, repo, exc)
+    except Exception:
         return None
 
 
@@ -155,7 +150,6 @@ async def get_repo_labels(owner: str, repo: str, token: str = "") -> list[dict[s
         async with httpx.AsyncClient(timeout=10.0) as client:
             res = await client.get(url, headers=_get_auth_headers(token))
             if res.status_code != 200:
-                logger.warning("Labels API %d for %s/%s", res.status_code, owner, repo)
                 return FALLBACK_LABELS
             data = res.json()
             if not isinstance(data, list):
@@ -170,8 +164,7 @@ async def get_repo_labels(owner: str, repo: str, token: str = "") -> list[dict[s
                 }
                 for l in data
             ]
-    except Exception as exc:
-        logger.error("Failed to fetch labels for %s/%s: %s", owner, repo, exc)
+    except Exception:
         return FALLBACK_LABELS
 
 
@@ -189,15 +182,13 @@ async def get_recent_issues(
         async with httpx.AsyncClient(timeout=10.0) as client:
             res = await client.get(url, headers=_get_auth_headers(token))
             if res.status_code != 200:
-                logger.warning("Issues API %d for %s/%s", res.status_code, owner, repo)
                 return []
             data = res.json()
             if not isinstance(data, list):
                 return []
             # Filter out pull requests
             return [_map_issue(item) for item in data if "pull_request" not in item]
-    except Exception as exc:
-        logger.error("Failed to fetch issues for %s/%s: %s", owner, repo, exc)
+    except Exception:
         return []
 
 

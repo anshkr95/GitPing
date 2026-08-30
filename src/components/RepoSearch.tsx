@@ -122,8 +122,7 @@ export function RepoSearch({ onSelectRepo, trackedRepoNames }: RepoSearchProps) 
         const data = await res.json();
         if (data.items) setResults(data.items);
         setHasMore(data.hasMore || false);
-      } catch (err) {
-        console.error('Search failed:', err);
+      } catch {
       } finally {
         setLoading(false);
       }
@@ -143,8 +142,7 @@ export function RepoSearch({ onSelectRepo, trackedRepoNames }: RepoSearchProps) 
       if (data.items) setResults((prev) => [...prev, ...data.items]);
       setHasMore(data.hasMore || false);
       setPage(nextPage);
-    } catch (err) {
-      console.error('Load more failed:', err);
+    } catch {
     } finally {
       setLoadingMore(false);
     }

@@ -124,9 +124,7 @@ export default function Home() {
         setUnreadNotifCount(notifsData.unreadCount || 0);
       }
       if (settingsData.settings) setSettings(settingsData.settings);
-    } catch (err) {
-      console.error('Fetch error:', err);
-    }
+    } catch {}
   }, [settings.soundEnabled]);
 
   // Initial load

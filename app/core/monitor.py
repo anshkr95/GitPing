@@ -4,7 +4,6 @@ Async scan engine
 
 from __future__ import annotations
 
-import logging
 import random
 import string
 import time
@@ -16,7 +15,6 @@ from app.core.github import get_recent_issues
 from app.core.matcher import match_issue_labels
 from app.core.mailer import send_issue_alert_email
 
-logger = logging.getLogger(__name__)
 
 
 def _rand_id(length: int = 5) -> str:
@@ -51,7 +49,12 @@ async def scan_all_subscriptions(
 
     for sub in subscriptions:
         try:
-            since_time = sub.get("createdAt") or _now_iso()
+            # Advance the GitHub query window after every successful scan.  Using
+            # ``createdAt`` here forever made each scan re-read the entire
+            # subscription lifetime and, because only the newest GitHub page is
+            # returned, could leave a repository looking like it was not being
+            # tracked at all.
+            since_time = sub.get("lastCheckedAt") or sub.get("createdAt") or _now_iso()
             issues = await get_recent_issues(
                 sub.get("repoOwner", ""),
                 sub.get("repoName", ""),
@@ -60,12 +63,13 @@ async def scan_all_subscriptions(
             )
 
             for issue in issues:
-                # Skip issues created before tracking began
+                # ``since`` on GitHub's issues API is based on updates rather
+                # than creation.  Keep the monitoring window strict locally.
                 issue_created = issue.get("created_at", "")
-                sub_created = sub.get("createdAt", "")
-                if issue_created and sub_created:
+                scan_started = sub.get("lastCheckedAt") or sub.get("createdAt", "")
+                if issue_created and scan_started:
                     try:
-                        if datetime.fromisoformat(issue_created.replace("Z", "+00:00")) < datetime.fromisoformat(sub_created.replace("Z", "+00:00")):
+                        if datetime.fromisoformat(issue_created.replace("Z", "+00:00")) < datetime.fromisoformat(scan_started.replace("Z", "+00:00")):
                             continue
                     except (ValueError, TypeError):
                         pass
@@ -128,12 +132,12 @@ async def scan_all_subscriptions(
                     if settings.get("emailEnabled", True):
                         try:
                             await send_issue_alert_email(detected, sub)
-                        except Exception as exc:
-                            logger.error("Email dispatch error: %s", exc)
+                        except Exception:
+                            pass
 
             database.update_subscription(sub.get("id", ""), {"lastCheckedAt": _now_iso()})
-        except Exception as exc:
-            logger.error("Error scanning %s: %s", sub.get("repoFullName"), exc)
+        except Exception:
+            pass
 
     return report
 
@@ -145,7 +149,7 @@ async def scan_single_subscription(sub_id: str) -> list[dict[str, Any]]:
         return []
 
     settings = database.get_settings()
-    since_time = sub.get("createdAt") or _now_iso()
+    since_time = sub.get("lastCheckedAt") or sub.get("createdAt") or _now_iso()
     issues = await get_recent_issues(
         sub.get("repoOwner", ""),
         sub.get("repoName", ""),
@@ -157,10 +161,10 @@ async def scan_single_subscription(sub_id: str) -> list[dict[str, Any]]:
 
     for issue in issues:
         issue_created = issue.get("created_at", "")
-        sub_created = sub.get("createdAt", "")
-        if issue_created and sub_created:
+        scan_started = sub.get("lastCheckedAt") or sub.get("createdAt", "")
+        if issue_created and scan_started:
             try:
-                if datetime.fromisoformat(issue_created.replace("Z", "+00:00")) < datetime.fromisoformat(sub_created.replace("Z", "+00:00")):
+                if datetime.fromisoformat(issue_created.replace("Z", "+00:00")) < datetime.fromisoformat(scan_started.replace("Z", "+00:00")):
                     continue
             except (ValueError, TypeError):
                 pass
@@ -221,8 +225,8 @@ async def scan_single_subscription(sub_id: str) -> list[dict[str, Any]]:
             if settings.get("emailEnabled", True):
                 try:
                     await send_issue_alert_email(detected, sub)
-                except Exception as exc:
-                    logger.error("Email dispatch error: %s", exc)
+                except Exception:
+                    pass
 
     database.update_subscription(sub.get("id", ""), {"lastCheckedAt": _now_iso()})
     return newly_matched

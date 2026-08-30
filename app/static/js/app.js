@@ -80,10 +80,10 @@ document.addEventListener('DOMContentLoaded', () => {
 async function fetchAllData() {
   try {
     const [subs, issues, notifs, settings] = await Promise.all([
-      api('/api/subscriptions'),
-      api('/api/issues'),
-      api('/api/notifications'),
-      api('/api/settings'),
+      api('/api/subscriptions').catch(() => ({ subscriptions: [] })),
+      api('/api/issues').catch(() => ({ issues: [] })),
+      api('/api/notifications').catch(() => ({ notifications: [], unreadCount: 0 })),
+      api('/api/settings').catch(() => ({ settings: {} })),
     ]);
     state.subscriptions = subs.subscriptions || [];
     state.issues = issues.issues || [];
@@ -94,8 +94,8 @@ async function fetchAllData() {
     }
     startCountdown();
     render();
-  } catch (err) {
-    toast('Failed to load data', err.message, 'error');
+  } catch {
+    toast('Failed to load data', 'Please try again.', 'error');
   }
 }
 
@@ -518,6 +518,7 @@ async function saveLabels() {
   }
 
   const repo = state.selectedRepo;
+  const isEdit = !!state.editingSub;
   const body = {
     repoFullName: repo.full_name,
     repoOwner: (repo.owner || {}).login || repo.full_name.split('/')[0],
@@ -533,23 +534,29 @@ async function saveLabels() {
   };
 
   try {
-    if (state.editingSub) {
-      // Update existing
+    if (isEdit) {
       await api('/api/subscriptions', {
         method: 'PATCH',
         body: JSON.stringify({ id: state.editingSub.id, ...body }),
       });
       toast('Updated', `Labels updated for ${repo.full_name}`, 'success');
     } else {
-      // Create new
-      await api('/api/subscriptions', { method: 'POST', body: JSON.stringify(body) });
+      const result = await api('/api/subscriptions', { method: 'POST', body: JSON.stringify(body) });
       toast('Tracking', `Now tracking ${repo.full_name}`, 'success');
+      // Start monitoring right away rather than waiting for the next countdown.
+      // This also records the initial scan boundary for subsequent polls.
+      await api('/api/monitor/scan', {
+        method: 'POST',
+        body: JSON.stringify({ subscriptionId: result.subscription.id }),
+      });
     }
     closeLabelModal();
     await fetchAllData();
-    if (!state.editingSub) {
-      const trackedSection = $('tracked-section');
-      if (trackedSection) trackedSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (!isEdit) {
+      $('search-results').innerHTML = '';
+      $('search-load-more').classList.add('hidden');
+      $('search-input').value = '';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   } catch (err) {
     toast('Could not save', err.message, 'error');

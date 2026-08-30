@@ -98,7 +98,6 @@ export async function POST(request: NextRequest) {
       matchedLabels: matchResult.matchedLabels,
     });
   } catch (err: any) {
-    console.error('Webhook error:', err);
     return NextResponse.json({ error: err.message || 'Webhook processing failed' }, { status: 500 });
   }
 }

@@ -28,12 +28,17 @@ export async function scanAllSubscriptions(overrideSubscriptions?: Subscription[
 
   for (const sub of subscriptions) {
     try {
-      const sinceTime = sub.createdAt || new Date().toISOString();
+      // Use the end of the previous successful scan as the monitoring window.
+      // Reusing createdAt eventually makes the newest GitHub results page hide
+      // issues that were opened since a later scan.
+      const sinceTime = sub.lastCheckedAt || sub.createdAt || new Date().toISOString();
       const issues = await getRecentIssues(sub.repoOwner, sub.repoName, sinceTime, settings.githubToken);
       
       for (const issue of issues) {
-        // Strictly only process issues created AFTER tracking began
-        if (new Date(issue.created_at) < new Date(sub.createdAt)) continue;
+        // GitHub's `since` parameter filters by update time, so retain a strict
+        // created-time boundary locally for the current scan window.
+        const scanStartedAt = sub.lastCheckedAt || sub.createdAt;
+        if (scanStartedAt && new Date(issue.created_at) < new Date(scanStartedAt)) continue;
 
         report.totalNewIssuesEvaluated++;
         const alreadySeen = db.hasSeenIssue(sub.repoFullName, issue.number);
@@ -86,18 +91,14 @@ export async function scanAllSubscriptions(overrideSubscriptions?: Subscription[
             if (settings.emailEnabled) {
               try {
                 await sendIssueAlertEmail(detected, sub);
-              } catch (err) {
-                console.error('Email alert dispatch error:', err);
-              }
+              } catch {}
             }
           }
         }
       }
 
       db.updateSubscription(sub.id, { lastCheckedAt: new Date().toISOString() });
-    } catch (err) {
-      console.error(`Error scanning repository ${sub.repoFullName}:`, err);
-    }
+    } catch {}
   }
 
   return report;
@@ -109,12 +110,13 @@ export async function scanSingleSubscription(subId: string): Promise<DetectedIss
   if (!sub) return [];
 
   const settings = db.getSettings();
-  const sinceTime = sub.createdAt || new Date().toISOString();
+  const sinceTime = sub.lastCheckedAt || sub.createdAt || new Date().toISOString();
   const issues = await getRecentIssues(sub.repoOwner, sub.repoName, sinceTime, settings.githubToken);
   const newlyMatched: DetectedIssue[] = [];
 
   for (const issue of issues) {
-    if (new Date(issue.created_at) < new Date(sub.createdAt)) continue;
+    const scanStartedAt = sub.lastCheckedAt || sub.createdAt;
+    if (scanStartedAt && new Date(issue.created_at) < new Date(scanStartedAt)) continue;
 
     const alreadySeen = db.hasSeenIssue(sub.repoFullName, issue.number);
     if (!alreadySeen) {
@@ -163,9 +165,7 @@ export async function scanSingleSubscription(subId: string): Promise<DetectedIss
         if (settings.emailEnabled) {
           try {
             await sendIssueAlertEmail(detected, sub);
-          } catch (err) {
-            console.error('Email alert dispatch error:', err);
-          }
+          } catch {}
         }
       }
     }

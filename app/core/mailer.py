@@ -4,7 +4,6 @@ Async email sender using aiosmtplib
 
 from __future__ import annotations
 
-import logging
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -13,7 +12,6 @@ import aiosmtplib
 from app.config import get_settings
 from app.core import db as database
 
-logger = logging.getLogger(__name__)
 
 
 
@@ -132,11 +130,9 @@ async def send_issue_alert_email(issue: dict, sub: dict | None = None) -> None:
     recipient = db_settings.get("email") or cfg.gitping_alert_email or ""
 
     if not recipient or not db_settings.get("emailEnabled", True):
-        logger.info("[Mailer] Email disabled or no recipient for %s#%s", issue.get("repoFullName"), issue.get("issueNumber"))
         return
 
     if not cfg.smtp_configured:
-        logger.info("[Mailer] SMTP not configured - skipping email to %s", recipient)
         return
 
     html = _build_issue_alert_html(issue, sub)
@@ -158,9 +154,8 @@ async def send_issue_alert_email(issue: dict, sub: dict | None = None) -> None:
             use_tls=False,
             start_tls=True,
         )
-        logger.info("[Mailer] Email sent to %s for %s#%s", recipient, issue.get("repoFullName"), issue.get("issueNumber"))
-    except Exception as exc:
-        logger.error("[Mailer] Failed to send to %s: %s", recipient, exc)
+    except Exception:
+        pass
 
 
 async def send_welcome_email(recipient: str) -> dict:
@@ -169,7 +164,6 @@ async def send_welcome_email(recipient: str) -> dict:
 
     if not cfg.smtp_configured:
         msg_text = "SMTP not configured. Please set SMTP_USER and SMTP_PASS environment variables."
-        logger.info("[Mailer] %s", msg_text)
         return {"success": False, "error": msg_text}
 
     html = _build_welcome_html(recipient)
@@ -189,9 +183,7 @@ async def send_welcome_email(recipient: str) -> dict:
             use_tls=False,
             start_tls=True,
         )
-        logger.info("[Mailer] Welcome email sent to %s", recipient)
         return {"success": True}
     except Exception as exc:
         error_msg = str(exc)
-        logger.error("[Mailer] Welcome email failed for %s: %s", recipient, error_msg)
         return {"success": False, "error": error_msg}

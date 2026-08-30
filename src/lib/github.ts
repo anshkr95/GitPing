@@ -48,7 +48,6 @@ export async function searchRepositories(query: string, token?: string): Promise
 
     if (!res.ok) {
       // If rate limited or error, filter curated repos that match query
-      console.warn(`GitHub search API returned ${res.status}: ${res.statusText}`);
       return getCuratedRepoFallback(cleanQuery);
     }
 
@@ -71,8 +70,7 @@ export async function searchRepositories(query: string, token?: string): Promise
       html_url: item.html_url,
       updated_at: item.updated_at,
     }));
-  } catch (err) {
-    console.error('Failed to fetch from GitHub search API:', err);
+  } catch {
     return getCuratedRepoFallback(cleanQuery);
   }
 }
@@ -155,8 +153,7 @@ export async function getRepoDetails(owner: string, repo: string, token?: string
       html_url: item.html_url,
       updated_at: item.updated_at,
     };
-  } catch (err) {
-    console.error(`Failed to get repo details for ${owner}/${repo}:`, err);
+  } catch {
     return null;
   }
 }
@@ -170,7 +167,6 @@ export async function getRepoLabels(owner: string, repo: string, token?: string)
     });
 
     if (!res.ok) {
-      console.warn(`GitHub labels API returned ${res.status} for ${owner}/${repo}`);
       return getFallbackLabels(owner, repo);
     }
 
@@ -186,8 +182,7 @@ export async function getRepoLabels(owner: string, repo: string, token?: string)
       description: l.description || '',
       default: l.default,
     }));
-  } catch (err) {
-    console.error(`Failed to fetch labels for ${owner}/${repo}:`, err);
+  } catch {
     return getFallbackLabels(owner, repo);
   }
 }
@@ -228,7 +223,6 @@ export async function getRecentIssues(
     });
 
     if (!res.ok) {
-      console.warn(`GitHub issues API returned ${res.status} for ${owner}/${repo}`);
       return [];
     }
 
@@ -260,8 +254,7 @@ export async function getRecentIssues(
       updated_at: item.updated_at,
       repository_url: item.repository_url,
     }));
-  } catch (err) {
-    console.error(`Failed to fetch recent issues for ${owner}/${repo}:`, err);
+  } catch {
     return [];
   }
 }
